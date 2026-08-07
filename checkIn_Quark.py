@@ -7,11 +7,39 @@ cookie_list = os.getenv("COOKIE_QUARK").split('\n|&&')
 
 # 替代 notify 功能
 def send(title, message):
+    """
+    发送通知：优先 Telegram，失败则降级到控制台输出
+    保留原有的 print 输出作为备用
+    """
+    # 先打印到控制台
     print(f"{title}: {message}")
+    
+    # 尝试发送 Telegram 推送
+    bot_token = os.getenv("TG_BOT_TOKEN")
+    user_id = os.getenv("TG_USER_ID")
+    
+    if not bot_token or not user_id:
+        print("⚠️ 未配置 TG_BOT_TOKEN 或 TG_USER_ID，仅控制台输出")
+        return
+    
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    full_message = f"📦 {title}\n\n{message}"
+    
+    try:
+        resp = requests.post(url, json={
+            "chat_id": user_id,
+            "text": full_message
+        }, timeout=10)
+        if resp.status_code == 200:
+            print("✅ Telegram 推送成功")
+        else:
+            print(f"❌ Telegram 推送失败: {resp.text}")
+    except Exception as e:
+        print(f"❌ 推送异常: {e}")
 
 # 获取环境变量 
 def get_env(): 
-    # 判断 COOKIE_QUARK是否存在于环境变量 
+    # 判断 COOKIE_QUARK 是否存在于环境变量 
     if "COOKIE_QUARK" in os.environ: 
         # 读取系统变量以 \n 或 && 分割变量 
         cookie_list = re.split('\n|&&', os.environ.get('COOKIE_QUARK')) 
